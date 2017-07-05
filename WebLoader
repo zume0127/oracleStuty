@@ -1,0 +1,337 @@
+package com.huawei.esight.customdevice.as.web;
+
+import java.io.File;
+
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleActivator;
+import org.osgi.framework.BundleContext;
+
+import com.huawei.esight.customdevice.as.base.roa.InstallRest;
+import com.huawei.esight.customdevice.as.base.roa.KeyGeneratorRest;
+import com.huawei.esight.customdevice.as.base.roa.PageSecurityManagerRest;
+import com.huawei.esight.customdevice.as.mibmgr.analysis.roa.AlarmParseMibRest;
+import com.huawei.esight.customdevice.as.mibmgr.build.roa.MibMgrRest;
+import com.huawei.esight.customdevice.as.mibmgr.query.roa.InitLoadMibRest;
+import com.huawei.esight.customdevice.as.mibmgr.query.service.CustomDeviceBootHandle;
+import com.huawei.esight.customdevice.as.mibmgr.upload.roa.UploadDeleteRest;
+import com.huawei.esight.customdevice.as.momgr.consistency.roa.UniformityRest;
+import com.huawei.esight.customdevice.as.momgr.consistency.roa.UniformityTreeRest;
+import com.huawei.esight.customdevice.as.momgr.export.roa.ExportRest;
+import com.huawei.esight.customdevice.as.momgr.export.roa.ExportUpdateRest;
+import com.huawei.esight.customdevice.as.momgr.guide.configmgr.roa.GetImpDevtypeRest;
+import com.huawei.esight.customdevice.as.momgr.guide.configmgr.roa.QuerycfgFileSetRest;
+import com.huawei.esight.customdevice.as.momgr.guide.configmgr.roa.SaveCfgInfoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.AccurateDivisionRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.CheckDevBasicInfoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.ConnectionParamsMgrRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.DevTypeGuideRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.SNMPTemplateInfoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.SaveDevTypeBasicInfoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.devicetype.roa.SnmpGetSysOidRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.AlarmGroupQueryRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.AlarmOperationRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.ImportAlarmGroupQueryRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.ImportAlarmGroupRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.ImportMibRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.ImportTrapRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.QueryAlarmForClearRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.QueryPendingAlarmRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.roa.TrapFilesQueryRest;
+import com.huawei.esight.customdevice.as.momgr.guide.fm.service.GetCustomFaults;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.AddMeasUnitRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.GetOriginalInfoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.MeasUnitRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.PmQuoRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.PmQuotaResultZHRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.QueryMIBInfoFromXMLRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.SaveAllDataRest;
+import com.huawei.esight.customdevice.as.momgr.guide.pm.roa.SaveMeasTypeToXMLRest;
+import com.huawei.esight.customdevice.as.momgr.manage.roa.DeleteDeviceTypeRest;
+import com.huawei.esight.customdevice.as.momgr.manage.roa.DeviceTypeGetCountsRest;
+import com.huawei.esight.customdevice.as.momgr.manage.roa.DeviceTypeRest;
+import com.huawei.esight.customdevice.as.trap.roa.SnmpTrapCfgRest;
+import com.huawei.esight.customdevice.as.vendor.roa.DeviceClassifyRest;
+import com.huawei.esight.customdevice.as.vendor.roa.DeviceSeriesRest;
+import com.huawei.esight.customdevice.as.vendor.roa.GetDeviceClassicsRest;
+import com.huawei.esight.customdevice.as.vendor.roa.GetDeviceSeriesRest;
+import com.huawei.esight.customdevice.as.vendor.roa.GetVendorRest;
+import com.huawei.esight.customdevice.as.vendor.roa.QueryVendorByConditionRest;
+import com.huawei.esight.customdevice.as.vendor.roa.VendorMgrRest;
+import com.huawei.esight.customdevice.as.vendor.roa.VendorTreeDataRest;
+import com.huawei.oms.bootstage.BootManager;
+import com.huawei.oms.exception.OMSException;
+import com.huawei.oms.framework.remoteservice.exception.ServiceException;
+import com.huawei.oms.framework.roa.ROA;
+import com.huawei.oms.framework.roa.exception.DuplicateServiceException;
+import com.huawei.oms.framework.roa.exception.IllegalServiceException;
+import com.huawei.oms.framework.roa.exception.NotExistServiceException;
+import com.huawei.oms.framework.roa.exception.WebServerException;
+import com.huawei.oms.framework.rpc.api.RestFactory;
+import com.huawei.oms.log.OMSLog;
+import com.huawei.oms.log.OMSLogFactory;
+
+/**
+ * Bundle启动停止处理类
+ *
+ * @author w00221302
+ */
+public class WebLoader implements BundleActivator
+{
+    private static final OMSLog LOGGER = OMSLogFactory.getLog(WebLoader.class);
+
+    private static String appContextName = "";
+
+    private static final String CONTEXTNAME = "Web-ContextPath";
+
+    private static final String WEBRESOURCEPATH = "Web-ResourcePath";
+
+    /**
+     * web资源路径
+     */
+    private static String resourcePath = "";
+
+    /**
+     * 获取web资源路径
+     *
+     * @return web资源路径
+     */
+    public static String getWebappPath()
+    {
+        return resourcePath;
+    }
+
+    /**
+     * 启动方法
+     *
+     * @param context 上下文
+     * @throws OMSException OMS异常
+     */
+    @Override
+    public void start(final BundleContext context)
+        throws OMSException
+    {
+        try
+        {
+            ROA.addRestfulService(new VendorTreeDataRest());
+            ROA.addRestfulService(new KeyGeneratorRest());
+            ROA.addRestfulService(new InstallRest());
+            ROA.addRestfulService(new ImportAlarmGroupQueryRest());
+            ROA.addRestfulService(new AlarmGroupQueryRest());
+            ROA.addRestfulService(new QueryPendingAlarmRest());
+            ROA.addRestfulService(new QueryAlarmForClearRest());
+            ROA.addRestfulService(new TrapFilesQueryRest());
+            ROA.addRestfulService(new AlarmParseMibRest());
+            ROA.addRestfulService(new InitLoadMibRest());
+            ROA.addRestfulService(new DeviceClassifyRest());
+            ROA.addRestfulService(new GetDeviceClassicsRest());
+            ROA.addRestfulService(new GetVendorRest());
+            ROA.addRestfulService(new VendorMgrRest());
+            ROA.addRestfulService(new QueryVendorByConditionRest());
+            ROA.addRestfulService(new DeviceSeriesRest());
+            ROA.addRestfulService(new GetDeviceSeriesRest());
+            ROA.addRestfulService(new ConnectionParamsMgrRest());
+            ROA.addRestfulService(new GetImpDevtypeRest());
+            ROA.addRestfulService(new QuerycfgFileSetRest());
+            ROA.addRestfulService(new SaveCfgInfoRest());
+            ROA.addRestfulService(new DeleteDeviceTypeRest());
+            ROA.addRestfulService(new DeviceTypeGetCountsRest());
+            ROA.addRestfulService(new DeviceTypeRest());
+            ROA.addRestfulService(new ExportRest());
+            ROA.addRestfulService(new ExportUpdateRest());
+
+            ROA.addRestfulService(new MibMgrRest());
+            ROA.addRestfulService(new AddMeasUnitRest());
+            ROA.addRestfulService(new GetOriginalInfoRest());
+            ROA.addRestfulService(new MeasUnitRest());
+            ROA.addRestfulService(new PmQuoRest());
+            ROA.addRestfulService(new PmQuotaResultZHRest());
+            ROA.addRestfulService(new QueryMIBInfoFromXMLRest());
+            ROA.addRestfulService(new SaveAllDataRest());
+            ROA.addRestfulService(new SaveMeasTypeToXMLRest());
+            ROA.addRestfulService(new PageSecurityManagerRest());
+
+            ROA.addRestfulService(new SnmpGetSysOidRest());
+            ROA.addRestfulService(new SnmpTrapCfgRest());
+            ROA.addRestfulService(new CheckDevBasicInfoRest());
+            ROA.addRestfulService(new DevTypeGuideRest());
+            ROA.addRestfulService(new SaveDevTypeBasicInfoRest());
+            ROA.addRestfulService(new UploadDeleteRest());
+            ROA.addRestfulService(new UniformityRest());
+            ROA.addRestfulService(new UniformityTreeRest());
+            ROA.addRestfulService(new SNMPTemplateInfoRest());
+            ROA.addRestfulService(new AlarmOperationRest());
+            ROA.addRestfulService(new ImportAlarmGroupRest());
+            ROA.addRestfulService(new ImportMibRest());
+            ROA.addRestfulService(new ImportTrapRest());
+            RestFactory.getRestInstance().registerService("esight/thirdparty/getAlarmsByCondition", new GetCustomFaults());
+            RestFactory.getRestInstance().registerService("internalApi/3rdDeviceDef/deviceType/accurateDivision", new AccurateDivisionRest());
+            statWeb(context);
+            BootManager.instance().registerBootHandle(new CustomDeviceBootHandle());
+            LOGGER.info("ROA addRestfulService success.");
+        }
+        catch (final IllegalServiceException e)
+        {
+            LOGGER.error("ROA addRestfulService error. IllegalServiceException.", e);
+        }
+        catch (final DuplicateServiceException e)
+        {
+            LOGGER.error("ROA addRestfulService error. DuplicateServiceException.");
+        }
+        catch (final ServiceException e)
+        {
+            LOGGER.error("Register JMS Restful util error!", e);
+        }
+        LOGGER.info("registerROAService complete.");
+    }
+
+    /**
+     * 停止方法
+     *
+     * @param context 上下文
+     * @throws OMSException OMS异常
+     */
+    @Override
+    public void stop(final BundleContext context)
+        throws OMSException
+    {
+        try
+        {
+            ROA.removeRestfulService(new VendorTreeDataRest());
+            ROA.removeRestfulService(new KeyGeneratorRest());
+            ROA.removeRestfulService(new InstallRest());
+            ROA.removeRestfulService(new ImportAlarmGroupQueryRest());
+            ROA.removeRestfulService(new AlarmGroupQueryRest());
+            ROA.removeRestfulService(new QueryPendingAlarmRest());
+            ROA.removeRestfulService(new QueryAlarmForClearRest());
+            ROA.removeRestfulService(new TrapFilesQueryRest());
+            ROA.removeRestfulService(new AlarmParseMibRest());
+            ROA.removeRestfulService(new InitLoadMibRest());
+            ROA.removeRestfulService(new DeviceClassifyRest());
+            ROA.removeRestfulService(new GetDeviceClassicsRest());
+            ROA.removeRestfulService(new GetVendorRest());
+            ROA.removeRestfulService(new VendorMgrRest());
+            ROA.removeRestfulService(new QueryVendorByConditionRest());
+            ROA.removeRestfulService(new DeviceSeriesRest());
+            ROA.removeRestfulService(new GetDeviceSeriesRest());
+            ROA.removeRestfulService(new ConnectionParamsMgrRest());
+            ROA.removeRestfulService(new GetImpDevtypeRest());
+            ROA.removeRestfulService(new QuerycfgFileSetRest());
+            ROA.removeRestfulService(new SaveCfgInfoRest());
+            ROA.removeRestfulService(new DeleteDeviceTypeRest());
+            ROA.removeRestfulService(new DeviceTypeGetCountsRest());
+            ROA.removeRestfulService(new DeviceTypeRest());
+            ROA.removeRestfulService(new ExportRest());
+            ROA.removeRestfulService(new ExportUpdateRest());
+            ROA.removeRestfulService(new MibMgrRest());
+            ROA.removeRestfulService(new AddMeasUnitRest());
+            ROA.removeRestfulService(new GetOriginalInfoRest());
+            ROA.removeRestfulService(new MeasUnitRest());
+            ROA.removeRestfulService(new PmQuoRest());
+            ROA.removeRestfulService(new PmQuotaResultZHRest());
+            ROA.removeRestfulService(new QueryMIBInfoFromXMLRest());
+            ROA.removeRestfulService(new SaveAllDataRest());
+            ROA.removeRestfulService(new SaveMeasTypeToXMLRest());
+            ROA.removeRestfulService(new PageSecurityManagerRest());
+            ROA.removeRestfulService(new SnmpGetSysOidRest());
+            ROA.removeRestfulService(new SnmpTrapCfgRest());
+            ROA.removeRestfulService(new CheckDevBasicInfoRest());
+            ROA.removeRestfulService(new DevTypeGuideRest());
+            ROA.removeRestfulService(new SaveDevTypeBasicInfoRest());
+            ROA.removeRestfulService(new UploadDeleteRest());
+            ROA.removeRestfulService(new UniformityRest());
+            ROA.removeRestfulService(new UniformityTreeRest());
+            ROA.removeRestfulService(new AlarmOperationRest());
+            ROA.removeRestfulService(new ImportAlarmGroupRest());
+            ROA.removeRestfulService(new ImportMibRest());
+            ROA.removeRestfulService(new ImportTrapRest());
+            RestFactory.getRestInstance().unregisterService("internalApi/3rdDeviceDef/deviceType/accurateDivision");
+            RestFactory.getRestInstance().unregisterService("esight/thirdparty/getAlarmsByCondition");
+
+            stopWebCtx(appContextName);
+
+            LOGGER.info("ROA remove JMS RestfulService success.");
+        }
+        catch (final IllegalServiceException e)
+        {
+            LOGGER.error("ROA removeRestfulService error. IllegalServiceException.", e);
+        }
+        catch (final NotExistServiceException e)
+        {
+            LOGGER.error("ROA removeRestfulService error. NotExistServiceException.");
+        }
+        catch (final ServiceException e)
+        {
+            LOGGER.error("Unregister JMS Restful util error!", e);
+        }
+    }
+
+    private void statWeb(final BundleContext context)
+    {
+        final Bundle bundle = context.getBundle();
+        appContextName = String.valueOf(bundle.getHeaders().get(CONTEXTNAME));
+        resourcePath = String.valueOf(bundle.getHeaders().get(WEBRESOURCEPATH));
+        startWebCtx(appContextName, resourcePath);
+    }
+
+    /**
+     * 拉起WebUI方法
+     *
+     * @param ctxName 上下文
+     * @param resPath 资源路径
+     */
+    private void startWebCtx(final String ctxName, final String resPath)
+    {
+        LOGGER.debug("start ui web context.");
+        if ((null == resPath) || (null == ctxName))
+        {
+            LOGGER.error("One param==null in appContextName,resourcePath! please check web bootstage config!");
+            return;
+        }
+        final ClassLoader bundleCL = this.getClass().getClassLoader();
+        if (new File(resPath).exists())
+        {
+            try
+            {
+                ROA.addWebApp("/" + ctxName, ctxName, resPath, bundleCL);
+            }
+            catch (final IllegalServiceException e)
+            {
+                LOGGER.error("startWebCtx:IllegalServiceException catched.", e);
+            }
+            catch (final DuplicateServiceException e)
+            {
+                LOGGER.error("startWebCtx:DuplicateServiceException catched.", e);
+            }
+            catch (final WebServerException e)
+            {
+                LOGGER.error("startWebCtx:WebServerException catched.", e);
+            }
+        }
+        else
+        {
+            LOGGER.error(" there is no webapp start!");
+        }
+    }
+
+    /**
+     * 停止UI的方法
+     *
+     * @param ctxName 上下文
+     */
+    private void stopWebCtx(final String ctxName)
+    {
+        LOGGER.debug("stop ui web context.");
+        try
+        {
+            ROA.removeWebApp("/" + ctxName);
+        }
+        catch (final NotExistServiceException e)
+        {
+            LOGGER.error("stopWebCtx:NotExistServiceException catched.", e);
+        }
+        catch (final WebServerException e)
+        {
+            LOGGER.error("stopWebCtx:WebServerException catched.", e);
+        }
+    }
+}
