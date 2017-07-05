@@ -1,0 +1,139 @@
+package com.huawei.esight.customdevice.as.momgr;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Reader;
+import java.util.Iterator;
+import java.util.NoSuchElementException;
+
+import com.huawei.esight.customdevice.api.common.util.IOUtils;
+import com.huawei.oms.log.OMSLog;
+import com.huawei.oms.log.OMSLogFactory;
+
+/**
+ * 安全的BufferedReader.readline迭代器 限制每行最多只能读取65535个字符，如果超出将停止读取。
+ */
+public class SecurityLineIterator implements Iterator<String>
+{
+    private static final OMSLog LOGGER = OMSLogFactory.getLog(SecurityLineIterator.class);
+
+    private static final int MAX_STR_LEN = 65535;
+
+    private final BufferedReader bufferedReader;
+
+    private boolean finished = false;
+
+    private String cachedLine;
+
+    /**
+     * 构造函数
+     * 
+     * @param reader reader
+     */
+    public SecurityLineIterator(final Reader reader)
+    {
+        if (reader == null)
+        {
+            throw new IllegalArgumentException("Reader must not be null");
+        }
+        if (reader instanceof BufferedReader)
+        {
+            bufferedReader = (BufferedReader)reader;
+        }
+        else
+        {
+            bufferedReader = new BufferedReader(reader);
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public boolean hasNext()
+    {
+        if (cachedLine != null)
+        {
+            return true;
+        }
+        else if (finished)
+        {
+            close();
+            return false;
+        }
+        else
+        {
+            try
+            {
+                while (true)
+                {
+                    final StringBuffer sb = new StringBuffer();
+                    int intC;
+                    while ((intC = bufferedReader.read()) != -1)
+                    {
+                        final char c = (char)intC;
+                        if (c == '\n')
+                        {
+                            break;
+                        }
+                        if (sb.length() >= MAX_STR_LEN)
+                        {
+                            LOGGER.error("Input too long. It maybe an attacking.");
+                            close();
+                            return false;
+                        }
+                        sb.append(c);
+                    }
+                    final String line = sb.toString();
+
+                    if (-1 == intC)
+                    {
+                        if (!line.isEmpty())
+                        {
+                            cachedLine = line;
+                            return true;
+                        }
+                        close();
+                        return false;
+                    }
+                    else
+                    {
+                        cachedLine = line;
+                        return true;
+                    }
+                }
+            }
+            catch (final IOException ioe)
+            {
+                close();
+                throw new IllegalStateException("read error");
+            }
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String next()
+    {
+        if (!hasNext())
+        {
+            close();
+            throw new NoSuchElementException("No more lines");
+        }
+        final String currentLine = cachedLine;
+        cachedLine = null;
+        return currentLine;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void remove()
+    {
+        throw new UnsupportedOperationException("Remove unsupported on SecurityLineIterator");
+    }
+
+    private void close()
+    {
+        finished = true;
+        IOUtils.closeQuietly(bufferedReader);
+        cachedLine = null;
+    }
+}
