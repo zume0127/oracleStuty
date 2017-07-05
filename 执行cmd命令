@@ -1,0 +1,80 @@
+
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.text.Normalizer;
+import java.text.Normalizer.Form;
+
+/**
+ * 命令处理工具类
+ */
+public final class CmdUtil
+{
+    private static final OMSLog LOGGER = OMSLogFactory.getLog(CmdUtil.class);
+
+    /**
+     * 编码方式
+     */
+    private static final String ENCODE_UTF8 = "utf-8";
+
+    private CmdUtil()
+    {
+    }
+
+    /**
+     * 执行命令
+     * 
+     * @param cmd 命令串
+     * @return 成功或者失败
+     */
+    public static boolean executeCmd(final String cmd)
+    {
+        BufferedReader reader = null;
+        InputStreamReader input = null;
+        try
+        {
+            final String cmdArray[] = cmd.split(" ");
+            ProcessBuilder pb = new ProcessBuilder(cmdArray);
+            pb = pb.redirectErrorStream(true);
+            final Process process = pb.start();
+            input = new InputStreamReader(process.getInputStream(), ENCODE_UTF8);
+            reader = new BufferedReader(input);
+            String line = null;
+            final SecurityLineIterator lineItr = new SecurityLineIterator(reader);
+            while (lineItr.hasNext())
+            {
+                line = lineItr.next();
+                line = Normalizer.normalize(line, Form.NFKC);
+                if ((line != null) && (line.length() > 1024))
+                {
+                    LOGGER.error("line is too long.");
+                    return false;
+                }
+                if ((line != null) && line.contains("FAILED"))
+                {
+                    LOGGER.error("The print message contains failed.");
+                    return false;
+                }
+            }
+            int rslt = process.waitFor();
+            LOGGER.debug("The process wait for result: {}", rslt);
+            return 0 == rslt;
+        }
+        catch (final IOException e)
+        {
+            LOGGER.error("executeCmd failed. IOException.");
+            return false;
+        }
+        catch (final InterruptedException e)
+        {
+            LOGGER.error("executeCmd failed. InterruptedException.");
+            return false;
+        }
+        finally
+        {
+            IOUtils.closeQuietly(reader);
+            IOUtils.closeQuietly(input);
+        }
+    }
+}
